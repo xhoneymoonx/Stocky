@@ -1,0 +1,23 @@
+{
+  "token": "SEU_TOKEN_AQUI",
+  "clientId": "ID_DO_BOT_AQUI",
+  "guildId": "ID_DO_SERVIDOR_AQUI",
+  "channels": {
+    "bauMembros": "ID_CANAL_BAU_MEMBROS",
+    "bauGerencia": "ID_CANAL_BAU_GERENCIA",
+    "logMembros": "ID_CANAL_LOG_MEMBROS",
+    "logGerencia": "ID_CANAL_LOG_GERENCIA",
+    "inventarioMembros": "ID_CANAL_INVENTARIO_MEMBROS",
+    "inventarioGerencia": "ID_CANAL_INVENTARIO_GERENCIA",
+    "painelGerencia": "ID_CANAL_PAINEL_GERENCIA",
+    "caixaGangue": "ID_CANAL_CAIXA",
+    "logCaixa": "ID_CANAL_LOG_CAIXA",
+    "saldoCaixa": "ID_CANAL_SALDO_CAIXA"
+  },
+  "roles": {
+    "membro": "ID_CARGO_MEMBRO",
+    "gerente": "ID_CARGO_GERENTE",
+    "dono": "ID_CARGO_DONO"
+  },
+  "cor": 3447003
+}
