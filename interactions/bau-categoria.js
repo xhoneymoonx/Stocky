@@ -1,6 +1,32 @@
-const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
-const { embedSelecionarItem } = require('../utils/embeds');
+const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { embedSelecionarItem, embedMenuPrincipal } = require('../utils/embeds');
 const { getCategorias, getItensDaCategoria } = require('../utils/db');
+
+function rowMenuBau(tipo) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`bau_adicionar:${tipo}`)
+      .setLabel('📥 Adicionar')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`bau_remover:${tipo}`)
+      .setLabel('📤 Remover')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`bau_estoque:${tipo}`)
+      .setLabel('📋 Ver Estoque')
+      .setStyle(ButtonStyle.Primary)
+  );
+}
+
+function rowCancelar(tipo) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`bau_cancelar:${tipo}`)
+      .setLabel('❌ Cancelar')
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
 
 module.exports = {
   type: 'select',
@@ -17,20 +43,21 @@ module.exports = {
 
     if (!itens.length) {
       return interaction.editReply({
-        content: '❌ Nenhum item encontrado nessa categoria.',
-        embeds: [],
-        components: []
+        embeds: [embedMenuPrincipal(tipo)],
+        components: [rowMenuBau(tipo)]
       });
     }
 
-    const select = new StringSelectMenuBuilder()
-      .setCustomId(`bau_item:${acao}:${tipo}:${categoriaId}`)
-      .setPlaceholder('Selecione um item...')
-      .addOptions(itens.map(item => ({ label: item.nome, value: item.id })));
+    const selectRow = new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId(`bau_item:${acao}:${tipo}:${categoriaId}`)
+        .setPlaceholder('Selecione um item...')
+        .addOptions(itens.map(item => ({ label: item.nome, value: item.id })))
+    );
 
     return interaction.editReply({
       embeds: [embedSelecionarItem(acao, categoria.nome, categoria.emoji)],
-      components: [new ActionRowBuilder().addComponents(select)]
+      components: [selectRow, rowCancelar(tipo)]
     });
   }
 };

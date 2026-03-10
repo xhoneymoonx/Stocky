@@ -19,13 +19,29 @@ function rowMenuBau(tipo) {
   );
 }
 
+function rowCancelar(tipo) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`bau_cancelar:${tipo}`)
+      .setLabel('❌ Cancelar')
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
+
 module.exports = {
   type: 'button',
-  customIds: ['bau_adicionar', 'bau_remover', 'bau_estoque'],
+  customIds: ['bau_adicionar', 'bau_remover', 'bau_estoque', 'bau_cancelar'],
 
   async execute(interaction, client) {
     await interaction.deferUpdate();
     const [acao, tipo] = interaction.customId.split(':');
+
+    if (acao === 'bau_cancelar') {
+      return interaction.editReply({
+        embeds: [embedMenuPrincipal(tipo)],
+        components: [rowMenuBau(tipo)]
+      });
+    }
 
     if (acao === 'bau_estoque') {
       const bau = getBau(tipo);
@@ -38,14 +54,16 @@ module.exports = {
     const acaoNome = acao === 'bau_adicionar' ? 'adicionar' : 'remover';
     const categorias = getCategorias();
 
-    const select = new StringSelectMenuBuilder()
-      .setCustomId(`bau_categoria:${acaoNome}:${tipo}`)
-      .setPlaceholder('Selecione uma categoria...')
-      .addOptions(categorias.map(cat => ({ label: cat.nome, value: cat.id, emoji: cat.emoji })));
+    const selectRow = new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId(`bau_categoria:${acaoNome}:${tipo}`)
+        .setPlaceholder('Selecione uma categoria...')
+        .addOptions(categorias.map(cat => ({ label: cat.nome, value: cat.id, emoji: cat.emoji })))
+    );
 
     return interaction.editReply({
       embeds: [embedSelecionarCategoria(tipo, acaoNome)],
-      components: [new ActionRowBuilder().addComponents(select)]
+      components: [selectRow, rowCancelar(tipo)]
     });
   }
 };
