@@ -29,15 +29,7 @@ module.exports = {
   customIds: ['ger_adicionar_item', 'ger_remover_item', 'ger_zerar_bau', 'ger_ver_logs', 'ger_cancelar', 'ger_ajustar_membros', 'ger_ajustar_gerencia'],
 
   async execute(interaction, client) {
-    await interaction.deferUpdate();
     const acao = interaction.customId;
-
-    if (acao === 'ger_cancelar') {
-      return interaction.editReply({
-        embeds: [embedGerencia()],
-        components: [rowMenuGerencia(), rowMenuGerencia2()]
-      });
-    }
 
     if (acao === 'ger_ajustar_membros' || acao === 'ger_ajustar_gerencia') {
       const tipo = acao === 'ger_ajustar_membros' ? 'membros' : 'gerencia';
@@ -79,9 +71,16 @@ module.exports = {
         )
       );
 
-      return interaction.followUp({ content: '📩 Verifique seu DM! Cole o inventário editado no modal.', flags: 64 }).then(() => {
-        interaction.showModal(modal);
-      }).catch(() => interaction.showModal(modal));
+      return interaction.showModal(modal);
+    }
+
+    await interaction.deferUpdate();
+
+    if (acao === 'ger_cancelar') {
+      return interaction.editReply({
+        embeds: [embedGerencia()],
+        components: [rowMenuGerencia(), rowMenuGerencia2()]
+      });
     }
 
     if (acao === 'ger_adicionar_item') {
