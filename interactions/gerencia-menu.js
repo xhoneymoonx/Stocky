@@ -1,4 +1,4 @@
-const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { embedGerencia } = require('../utils/embeds');
 const { getCategorias } = require('../utils/db');
 
@@ -11,16 +11,11 @@ module.exports = {
     const acao = interaction.customId;
 
     if (acao === 'ger_adicionar_item') {
+      const categorias = await getCategorias();
       const select = new StringSelectMenuBuilder()
         .setCustomId('ger_cat_adicionar')
         .setPlaceholder('Selecione a categoria...')
-        .addOptions(
-          getCategorias().map(cat => ({
-            label: cat.nome,
-            value: cat.id,
-            emoji: cat.emoji
-          }))
-        );
+        .addOptions(categorias.map(cat => ({ label: cat.nome, value: cat.id, emoji: cat.emoji })));
 
       return interaction.editReply({
         embeds: [embedGerencia().setDescription('> Selecione a categoria do novo item:')],
@@ -29,16 +24,11 @@ module.exports = {
     }
 
     if (acao === 'ger_remover_item') {
+      const categorias = await getCategorias();
       const select = new StringSelectMenuBuilder()
         .setCustomId('ger_cat_remover')
         .setPlaceholder('Selecione a categoria...')
-        .addOptions(
-          getCategorias().map(cat => ({
-            label: cat.nome,
-            value: cat.id,
-            emoji: cat.emoji
-          }))
-        );
+        .addOptions(categorias.map(cat => ({ label: cat.nome, value: cat.id, emoji: cat.emoji })));
 
       return interaction.editReply({
         embeds: [embedGerencia().setDescription('> Selecione a categoria do item que deseja remover:')],

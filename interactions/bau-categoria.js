@@ -37,9 +37,9 @@ module.exports = {
     const [, acao, tipo] = interaction.customId.split(':');
     const categoriaId = interaction.values[0];
 
-    const categorias = getCategorias();
+    const categorias = await getCategorias();
     const categoria = categorias.find(c => c.id === categoriaId);
-    const itens = getItensDaCategoria(categoriaId);
+    const itens = await getItensDaCategoria(categoriaId);
 
     if (!itens.length) {
       return interaction.editReply({

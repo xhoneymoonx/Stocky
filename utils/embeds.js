@@ -72,7 +72,7 @@ function embedLog(acao, usuario, item, categoria, quantidade, novaQtd, tipoBau) 
     .setTimestamp();
 }
 
-function embedInventario(bau, tipo) {
+async function embedInventario(bau, tipo) {
   const titulo = tipo === 'gerencia' ? '🔐 Inventário — Baú da Gerência' : '📦 Inventário — Baú dos Membros';
   const embed = baseEmbed().setTitle(titulo);
 
@@ -90,7 +90,7 @@ function embedInventario(bau, tipo) {
   }
 
   const { getCategorias } = require('./db');
-  const categorias = getCategorias(tipo);
+  const categorias = await getCategorias();
 
   for (const [catId, dados] of Object.entries(porCategoria)) {
     const catInfo = categorias.find(c => c.id === catId);

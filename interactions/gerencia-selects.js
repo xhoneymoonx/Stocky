@@ -28,7 +28,7 @@ async function atualizarInventario(client, tipo) {
   const canalInvId = tipo === 'gerencia' ? config.channels.inventarioGerencia : config.channels.inventarioMembros;
   const canalInv = client.channels.cache.get(canalInvId);
   if (!canalInv) return;
-  const bau = getBau(tipo);
+  const bau = await getBau(tipo);
   const msgs = await canalInv.messages.fetch({ limit: 10 });
   const msgBot = msgs.find(m => m.author.id === client.user.id);
   if (msgBot) {
@@ -68,7 +68,7 @@ module.exports = {
     if (acao === 'ger_cat_remover') {
       await interaction.deferUpdate();
       const categoriaId = interaction.values[0];
-      const itens = getItensDaCategoria(categoriaId);
+      const itens = await getItensDaCategoria(categoriaId);
 
       if (!itens.length) {
         return interaction.editReply({
@@ -93,8 +93,7 @@ module.exports = {
       const [, categoriaId] = acao.split(':');
       const itemId = interaction.values[0];
 
-      // Remove do catálogo
-      const resultado = removerItemDoCatalogo(categoriaId, itemId);
+      const resultado = await removerItemDoCatalogo(categoriaId, itemId);
       if (!resultado.sucesso) {
         return interaction.editReply({
           embeds: [embedErro('Erro', resultado.motivo)],
@@ -102,22 +101,20 @@ module.exports = {
         });
       }
 
-      // Remove do baú de membros e gerência também
-      const { removerItemDoBauCompleto } = require('../utils/db');
-      const bauMembros = getBau('membros');
-      const bauGerencia = getBau('gerencia');
-      const key = `${categoriaId}:${itemId}`;
+      const bauMembros = await getBau('membros');
+      const bauGerencia = await getBau('gerencia');
+      const key = `${categoriaId}__${itemId}`;
+      const db = require('./firebase') ;
+
       if (bauMembros[key]) {
         delete bauMembros[key];
-        const fs = require('fs');
-        const path = require('path');
-        fs.writeFileSync(path.join(__dirname, '..', 'data', 'bau-membros.json'), JSON.stringify(bauMembros, null, 2));
+        const { getDb } = require('../utils/firebase');
+        await getDb().collection('bau').doc('membros').set(bauMembros);
       }
       if (bauGerencia[key]) {
         delete bauGerencia[key];
-        const fs = require('fs');
-        const path = require('path');
-        fs.writeFileSync(path.join(__dirname, '..', 'data', 'bau-gerencia.json'), JSON.stringify(bauGerencia, null, 2));
+        const { getDb } = require('../utils/firebase');
+        await getDb().collection('bau').doc('gerencia').set(bauGerencia);
       }
 
       await atualizarInventario(client, 'membros');
@@ -134,12 +131,12 @@ module.exports = {
       const tipo = interaction.values[0];
 
       if (tipo === 'ambos') {
-        zerarBau('membros');
-        zerarBau('gerencia');
+        await zerarBau('membros');
+        await zerarBau('gerencia');
         await atualizarInventario(client, 'membros');
         await atualizarInventario(client, 'gerencia');
       } else {
-        zerarBau(tipo);
+        await zerarBau(tipo);
         await atualizarInventario(client, tipo);
       }
 
@@ -152,7 +149,7 @@ module.exports = {
     if (acao === 'ger_logs_tipo') {
       await interaction.deferUpdate();
       const tipo = interaction.values[0];
-      const logs = getLogs(tipo);
+      const logs = await getLogs(tipo);
 
       if (!logs.length) {
         return interaction.editReply({
@@ -161,8 +158,7 @@ module.exports = {
         });
       }
 
-      const ultimos = logs.slice(0, 10);
-      const linhas = ultimos.map(l => {
+      const linhas = logs.map(l => {
         const data = new Date(l.timestamp).toLocaleString('pt-BR');
         const icone = l.acao === 'adicionar' ? '📥' : '📤';
         return `${icone} **${l.item.nome}** x${l.quantidade} — <@${l.usuarioId}> — ${data}`;

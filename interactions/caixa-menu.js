@@ -1,7 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder } = require('discord.js');
-const { getSaldo, adicionarCaixa, retirarCaixa, addLogCaixa, getLogsCaixa } = require('../utils/caixa');
+const { getSaldo, getLogsCaixa } = require('../utils/caixa');
 const { podeUsarBauGerencia } = require('../utils/permissoes');
-const config = require('../config.json');
 
 function embedCaixa(saldo) {
   return new EmbedBuilder()
@@ -33,24 +32,6 @@ function rowCaixa() {
   );
 }
 
-function embedLog(acao, usuario, tipo, valor, anotacao, saldo) {
-  const isAdd = acao === 'adicionar';
-  const tipoNome = tipo === 'sujo' ? '🖤 Dinheiro Sujo' : '💵 Dinheiro Limpo';
-  return new EmbedBuilder()
-    .setColor(isAdd ? 0x2ECC71 : 0xE74C3C)
-    .setTitle(isAdd ? '➕ Entrada no Caixa' : '➖ Saída do Caixa')
-    .addFields(
-      { name: '👤 Responsável', value: `<@${usuario.id}> — ${usuario.tag}`, inline: true },
-      { name: '💰 Tipo', value: tipoNome, inline: true },
-      { name: isAdd ? '➕ Valor Adicionado' : '➖ Valor Retirado', value: `$${valor.toLocaleString('pt-BR')}`, inline: true },
-      { name: '📝 Anotação', value: anotacao, inline: false },
-      { name: '🖤 Saldo Sujo', value: `$${saldo.sujo.toLocaleString('pt-BR')}`, inline: true },
-      { name: '💵 Saldo Limpo', value: `$${saldo.limpo.toLocaleString('pt-BR')}`, inline: true }
-    )
-    .setFooter({ text: 'Marabunta Grande — Stocky' })
-    .setTimestamp();
-}
-
 module.exports = {
   type: 'button',
   customIds: ['caixa_adicionar', 'caixa_retirar', 'caixa_logs'],
@@ -67,17 +48,17 @@ module.exports = {
 
     if (acao === 'caixa_logs') {
       await interaction.deferUpdate();
-      const logs = getLogsCaixa();
+      const logs = await getLogsCaixa();
 
       if (!logs.length) {
+        const saldo = await getSaldo();
         return interaction.editReply({
-          embeds: [embedCaixa(getSaldo()).setDescription('> 📭 Nenhuma movimentação registrada ainda.')],
+          embeds: [embedCaixa(saldo).setDescription('> 📭 Nenhuma movimentação registrada ainda.')],
           components: [rowCaixa()]
         });
       }
 
-      const ultimos = logs.slice(0, 10);
-      const linhas = ultimos.map(l => {
+      const linhas = logs.map(l => {
         const data = new Date(l.timestamp).toLocaleString('pt-BR');
         const icone = l.acao === 'adicionar' ? '➕' : '➖';
         const tipoNome = l.tipo === 'sujo' ? '🖤 Sujo' : '💵 Limpo';

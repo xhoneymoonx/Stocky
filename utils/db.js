@@ -1,30 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const BAU_MEMBROS_FILE = path.join(DATA_DIR, 'bau-membros.json');
-const BAU_GERENCIA_FILE = path.join(DATA_DIR, 'bau-gerencia.json');
-const ITEMS_FILE = path.join(DATA_DIR, 'items.json');
-const LOGS_MEMBROS_FILE = path.join(DATA_DIR, 'logs-membros.json');
-const LOGS_GERENCIA_FILE = path.join(DATA_DIR, 'logs-gerencia.json');
-
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-function readJSON(filePath, defaultValue) {
-  try {
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify(defaultValue, null, 2));
-      return defaultValue;
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return defaultValue;
-  }
-}
-
-function writeJSON(filePath, data) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-}
+const { getDb } = require('./firebase');
 
 const CATALOGO_PADRAO = {
   medicamentos: {
@@ -95,89 +69,106 @@ const CATALOGO_PADRAO = {
 
 // ─── BAÚ ─────────────────────────────────────────────────────────────────────
 
-function getBau(tipo) {
-  return readJSON(tipo === 'gerencia' ? BAU_GERENCIA_FILE : BAU_MEMBROS_FILE, {});
+async function getBau(tipo) {
+  const db = getDb();
+  const doc = await db.collection('bau').doc(tipo).get();
+  return doc.exists ? doc.data() : {};
 }
 
-function adicionarAoBau(tipo, categoriaId, itemId, quantidade, nomeItem, nomeCategoria) {
-  const file = tipo === 'gerencia' ? BAU_GERENCIA_FILE : BAU_MEMBROS_FILE;
-  const bau = readJSON(file, {});
-  const key = `${categoriaId}:${itemId}`;
+async function adicionarAoBau(tipo, categoriaId, itemId, quantidade, nomeItem, nomeCategoria) {
+  const db = getDb();
+  const ref = db.collection('bau').doc(tipo);
+  const doc = await ref.get();
+  const bau = doc.exists ? doc.data() : {};
+  const key = `${categoriaId}__${itemId}`;
   if (!bau[key]) {
     bau[key] = { nome: nomeItem, categoria: nomeCategoria, categoriaId, quantidade: 0 };
   }
   bau[key].quantidade += quantidade;
-  writeJSON(file, bau);
+  await ref.set(bau);
   return bau[key].quantidade;
 }
 
-function removerDoBau(tipo, categoriaId, itemId, quantidade) {
-  const file = tipo === 'gerencia' ? BAU_GERENCIA_FILE : BAU_MEMBROS_FILE;
-  const bau = readJSON(file, {});
-  const key = `${categoriaId}:${itemId}`;
+async function removerDoBau(tipo, categoriaId, itemId, quantidade) {
+  const db = getDb();
+  const ref = db.collection('bau').doc(tipo);
+  const doc = await ref.get();
+  const bau = doc.exists ? doc.data() : {};
+  const key = `${categoriaId}__${itemId}`;
   if (!bau[key]) return { sucesso: false, motivo: 'Item não encontrado no baú.' };
   if (bau[key].quantidade < quantidade) {
     return { sucesso: false, motivo: `Estoque insuficiente. Disponível: **${bau[key].quantidade}**` };
   }
   bau[key].quantidade -= quantidade;
   if (bau[key].quantidade === 0) delete bau[key];
-  writeJSON(file, bau);
+  await ref.set(bau);
   return { sucesso: true, novaQtd: bau[key] ? bau[key].quantidade : 0 };
 }
 
-function zerarBau(tipo) {
-  writeJSON(tipo === 'gerencia' ? BAU_GERENCIA_FILE : BAU_MEMBROS_FILE, {});
+async function zerarBau(tipo) {
+  const db = getDb();
+  await db.collection('bau').doc(tipo).set({});
 }
 
 // ─── CATÁLOGO ─────────────────────────────────────────────────────────────────
 
-function getCatalogo() {
-  return readJSON(ITEMS_FILE, CATALOGO_PADRAO);
+async function getCatalogo() {
+  const db = getDb();
+  const doc = await db.collection('catalogo').doc('items').get();
+  if (!doc.exists) {
+    await db.collection('catalogo').doc('items').set(CATALOGO_PADRAO);
+    return CATALOGO_PADRAO;
+  }
+  return doc.data();
 }
 
-function getCategorias() {
-  const catalogo = getCatalogo();
+async function getCategorias() {
+  const catalogo = await getCatalogo();
   return Object.entries(catalogo).map(([id, cat]) => ({ id, nome: cat.nome, emoji: cat.emoji }));
 }
 
-function getItensDaCategoria(categoriaId) {
-  const catalogo = getCatalogo();
+async function getItensDaCategoria(categoriaId) {
+  const catalogo = await getCatalogo();
   return catalogo[categoriaId] ? catalogo[categoriaId].items : [];
 }
 
-function adicionarItemAoCatalogo(categoriaId, itemId, nomeItem) {
-  const catalogo = getCatalogo();
+async function adicionarItemAoCatalogo(categoriaId, itemId, nomeItem) {
+  const db = getDb();
+  const catalogo = await getCatalogo();
   if (!catalogo[categoriaId]) return { sucesso: false, motivo: 'Categoria não encontrada.' };
   const jaExiste = catalogo[categoriaId].items.find(i => i.id === itemId);
   if (jaExiste) return { sucesso: false, motivo: 'Item já existe nessa categoria.' };
   catalogo[categoriaId].items.push({ id: itemId, nome: nomeItem });
-  writeJSON(ITEMS_FILE, catalogo);
+  await db.collection('catalogo').doc('items').set(catalogo);
   return { sucesso: true };
 }
 
-function removerItemDoCatalogo(categoriaId, itemId) {
-  const catalogo = getCatalogo();
+async function removerItemDoCatalogo(categoriaId, itemId) {
+  const db = getDb();
+  const catalogo = await getCatalogo();
   if (!catalogo[categoriaId]) return { sucesso: false, motivo: 'Categoria não encontrada.' };
   const idx = catalogo[categoriaId].items.findIndex(i => i.id === itemId);
   if (idx === -1) return { sucesso: false, motivo: 'Item não encontrado no catálogo.' };
   catalogo[categoriaId].items.splice(idx, 1);
-  writeJSON(ITEMS_FILE, catalogo);
+  await db.collection('catalogo').doc('items').set(catalogo);
   return { sucesso: true };
 }
 
 // ─── LOGS ─────────────────────────────────────────────────────────────────────
 
-function addLog(tipo, entrada) {
-  const file = tipo === 'gerencia' ? LOGS_GERENCIA_FILE : LOGS_MEMBROS_FILE;
-  const logs = readJSON(file, []);
-  logs.unshift({ ...entrada, timestamp: new Date().toISOString() });
-  if (logs.length > 500) logs.splice(500);
-  writeJSON(file, logs);
+async function addLog(tipo, entrada) {
+  const db = getDb();
+  await db.collection('logs').doc(tipo).collection('entradas').add({
+    ...entrada,
+    timestamp: new Date().toISOString()
+  });
 }
 
-function getLogs(tipo) {
-  const file = tipo === 'gerencia' ? LOGS_GERENCIA_FILE : LOGS_MEMBROS_FILE;
-  return readJSON(file, []);
+async function getLogs(tipo) {
+  const db = getDb();
+  const snap = await db.collection('logs').doc(tipo).collection('entradas')
+    .orderBy('timestamp', 'desc').limit(10).get();
+  return snap.docs.map(d => d.data());
 }
 
 module.exports = {

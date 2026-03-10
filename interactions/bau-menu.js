@@ -44,7 +44,7 @@ module.exports = {
     }
 
     if (acao === 'bau_estoque') {
-      const bau = getBau(tipo);
+      const bau = await getBau(tipo);
       return interaction.editReply({
         embeds: [embedInventario(bau, tipo)],
         components: [rowMenuBau(tipo)]
@@ -52,7 +52,7 @@ module.exports = {
     }
 
     const acaoNome = acao === 'bau_adicionar' ? 'adicionar' : 'remover';
-    const categorias = getCategorias();
+    const categorias = await getCategorias();
 
     const selectRow = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()

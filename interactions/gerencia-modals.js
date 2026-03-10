@@ -32,18 +32,12 @@ module.exports = {
     const nome = interaction.fields.getTextInputValue('nome');
     const id = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
-    const resultado = adicionarItemAoCatalogo(categoriaId, id, nome);
+    const resultado = await adicionarItemAoCatalogo(categoriaId, id, nome);
 
     if (!resultado.sucesso) {
-      await interaction.reply({
-        embeds: [embedErro('Erro', resultado.motivo)],
-        flags: 64
-      });
+      await interaction.reply({ embeds: [embedErro('Erro', resultado.motivo)], flags: 64 });
     } else {
-      await interaction.reply({
-        embeds: [embedSucesso('Item adicionado!', `**${nome}** foi adicionado ao catalogo com sucesso!`)],
-        flags: 64
-      });
+      await interaction.reply({ embeds: [embedSucesso('Item adicionado!', `**${nome}** foi adicionado ao catalogo com sucesso!`)], flags: 64 });
     }
 
     await interaction.message.edit({

@@ -8,7 +8,7 @@ module.exports = {
   async execute(interaction, client) {
     const [, acao, tipo, categoriaId] = interaction.customId.split(':');
     const itemId = interaction.values[0];
-    const itens = getItensDaCategoria(categoriaId);
+    const itens = await getItensDaCategoria(categoriaId);
     const item = itens.find(i => i.id === itemId);
 
     const modal = new ModalBuilder()

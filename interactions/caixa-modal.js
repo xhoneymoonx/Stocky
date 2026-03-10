@@ -61,34 +61,24 @@ module.exports = {
     const anotacao = interaction.fields.getTextInputValue('anotacao');
 
     if (tipoRaw !== 'sujo' && tipoRaw !== 'limpo') {
-      await interaction.reply({
-        content: '❌ Tipo inválido! Digite **sujo** ou **limpo**.',
-        flags: 64
-      });
-      await interaction.message.edit({
-        embeds: [embedCaixa(getSaldo())],
-        components: [rowCaixa()]
-      });
+      await interaction.reply({ content: '❌ Tipo inválido! Digite **sujo** ou **limpo**.', flags: 64 });
+      const saldo = await getSaldo();
+      await interaction.message.edit({ embeds: [embedCaixa(saldo)], components: [rowCaixa()] });
       return;
     }
 
     const valor = parseInt(valorRaw);
     if (isNaN(valor) || valor <= 0) {
-      await interaction.reply({
-        content: '❌ Valor inválido! Digite um número maior que zero.',
-        flags: 64
-      });
-      await interaction.message.edit({
-        embeds: [embedCaixa(getSaldo())],
-        components: [rowCaixa()]
-      });
+      await interaction.reply({ content: '❌ Valor inválido! Digite um número maior que zero.', flags: 64 });
+      const saldo = await getSaldo();
+      await interaction.message.edit({ embeds: [embedCaixa(saldo)], components: [rowCaixa()] });
       return;
     }
 
     let saldo;
 
     if (acao === 'adicionar') {
-      saldo = adicionarCaixa(tipoRaw, valor);
+      saldo = await adicionarCaixa(tipoRaw, valor);
       await interaction.reply({
         embeds: [
           new EmbedBuilder()
@@ -101,16 +91,11 @@ module.exports = {
         flags: 64
       });
     } else {
-      const resultado = retirarCaixa(tipoRaw, valor);
+      const resultado = await retirarCaixa(tipoRaw, valor);
       if (!resultado.sucesso) {
-        await interaction.reply({
-          content: `❌ ${resultado.motivo}`,
-          flags: 64
-        });
-        await interaction.message.edit({
-          embeds: [embedCaixa(getSaldo())],
-          components: [rowCaixa()]
-        });
+        await interaction.reply({ content: `❌ ${resultado.motivo}`, flags: 64 });
+        const saldoAtual = await getSaldo();
+        await interaction.message.edit({ embeds: [embedCaixa(saldoAtual)], components: [rowCaixa()] });
         return;
       }
       saldo = resultado.saldo;
@@ -127,12 +112,9 @@ module.exports = {
       });
     }
 
-    await interaction.message.edit({
-      embeds: [embedCaixa(saldo)],
-      components: [rowCaixa()]
-    });
+    await interaction.message.edit({ embeds: [embedCaixa(saldo)], components: [rowCaixa()] });
 
-    addLogCaixa({
+    await addLogCaixa({
       acao,
       usuarioId: interaction.user.id,
       usuarioTag: interaction.user.tag,
